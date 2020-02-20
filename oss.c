@@ -15,6 +15,17 @@
 #include "ossPrime.h"
 #include <string.h>
 #include <getopt.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
+
+#define SHMKEY 	859047
+#define BUFF_SZ sizeof(int)
+
+void createChildren();
+void child();
 
 int main(int argc, char* argv[]){
 	int option;		// Placeholder for command line arguments arg
@@ -63,10 +74,37 @@ int main(int argc, char* argv[]){
 		numArray[i] = numArray[i-1] + increNum;
 	}
 	
-	for(i = 0; i < maxChild; i++){
-		printf("Element in numArray[%d] = %d\n", i, numArray[i]);
-	}
+	for(i = 0; i < maxChild; i++)
+		prime(numArray[i]);
+
+	int primeArray[maxChild];	// Array of prime numbers that will be appeneded to.
 	*/
 	
+	createChildren();
+
 	return 0;	
+}
+
+void createChildren(){
+	int currentChildren = -1;
+	int childExist = -1;
+	int i = 0;
+	pid_t pid;
+	while(1){
+		pid = fork();
+		if(pid > 0){
+			if(i < 3){
+				child();
+				i = i + 1;
+			}
+		}
+		if(i >= 3)
+			break;
+	}
+	exit(0);
+}
+
+
+void child(){
+	printf("Went into child\n");
 }

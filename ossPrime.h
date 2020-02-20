@@ -1,1 +1,1 @@
-void prime(void);
+void prime(int inNum);
