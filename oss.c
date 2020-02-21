@@ -18,13 +18,16 @@
 #include <sys/shm.h>
 #include <sys/ipc.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define SHMKEY 	859047
 #define BUFF_SZ sizeof(int)
 
 void createChildren();
+void handler(int signal, int numpids, int *listPids);
 void child();
 
 int main(int argc, char* argv[]){
@@ -65,7 +68,7 @@ int main(int argc, char* argv[]){
 				return EXIT_FAILURE;
 		}
 	}
-	/*
+
 	// Create increments for prime numbers
 	int i;
 	int numArray[maxChild];
@@ -74,37 +77,57 @@ int main(int argc, char* argv[]){
 		numArray[i] = numArray[i-1] + increNum;
 	}
 	
-	for(i = 0; i < maxChild; i++)
-		prime(numArray[i]);
-
-	int primeArray[maxChild];	// Array of prime numbers that will be appeneded to.
-	*/
+	int arr[] = {10,11,12,14};
+	int activeChildren = 0;
+	int childDone = 0;
+	pid_t pid;
 	
-	createChildren();
+	while(childDone < maxChild){
+		if(childDone < maxChild){
+			pid = fork();
+		
+		if(pid < 0){
+			perror("FORKING ERROR\n");
+			exit(0);
+		}
+		if(pid == 0){
+			prime(arr[childDone]);
+			exit(0);
+		}
+		}
+		if(pid > 0){
+			if(childDone != 0)
+				activeChildren++;
+			childDone++;
+			if(activeChildren >= childExist){
+				printf("Currently waitng on children to die\n");
+				wait(NULL);
+				activeChildren--;
+			}
+			
+		}
+	}
+
+	printf("Out of forking\n");
 
 	return 0;	
 }
-
+/*
 void createChildren(){
-	int currentChildren = -1;
-	int childExist = -1;
-	int i = 0;
-	pid_t pid;
-	while(1){
-		pid = fork();
-		if(pid > 0){
-			if(i < 3){
-				child();
-				i = i + 1;
+	int childpid;
+	int i;
+	int currentChildren = 0;
+	int childrenDone = 0;
+	bool isDone = false;
+	while(childrenDone != maxChild){
+		i++;
+		if(fork() == 0){
+			if(currentChildren <= childExist){
+				currentChildren++;	
+				child(count1);
 			}
 		}
-		if(i >= 3)
-			break;
 	}
-	exit(0);
-}
+}	
+*/
 
-
-void child(){
-	printf("Went into child\n");
-}
