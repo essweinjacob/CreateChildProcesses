@@ -115,7 +115,8 @@ int main(int argc, char* argv[]){
 			}
 			else if(pid == 0){
 				// Shared memory testing
-
+				*pint = 10 * childDone;
+				printf("Parent mem int = %d\n", *pint);
 				// Good stuff here
 				printf("[son] pid %d from [parent] pid %d\n", getpid(),getppid());
 				char convert[15];
