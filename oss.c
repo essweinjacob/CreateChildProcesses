@@ -82,7 +82,7 @@ int main(int argc, char* argv[]){
 	int childDone = 0;
 	pid_t pid;
 	
-	while(childDone < maxChild){
+	while(childDone <= maxChild){
 		if(childDone < maxChild){
 			pid = fork();
 		
@@ -91,10 +91,13 @@ int main(int argc, char* argv[]){
 			exit(0);
 		}
 		if(pid == 0){
-			prime(arr[childDone]);
+			char convert[15];
+			sprintf(convert, "%d", arr[childDone]);
+			char *args[] = {"./prime", convert, NULL};
+			execvp(args[0], args);
 			exit(0);
 		}
-		}
+	}
 		if(pid > 0){
 			if(childDone != 0)
 				activeChildren++;
@@ -107,27 +110,9 @@ int main(int argc, char* argv[]){
 			
 		}
 	}
-
+	wait(NULL);
 	printf("Out of forking\n");
 
 	return 0;	
 }
-/*
-void createChildren(){
-	int childpid;
-	int i;
-	int currentChildren = 0;
-	int childrenDone = 0;
-	bool isDone = false;
-	while(childrenDone != maxChild){
-		i++;
-		if(fork() == 0){
-			if(currentChildren <= childExist){
-				currentChildren++;	
-				child(count1);
-			}
-		}
-	}
-}	
-*/
 
