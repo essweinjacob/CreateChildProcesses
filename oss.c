@@ -78,39 +78,66 @@ int main(int argc, char* argv[]){
 	}
 	
 	int arr[] = {10,11,12,14};
+	
+	// Variables for the fork loop
 	int activeChildren = 0;
 	int childDone = 0;
+	int exitCount = 0;
 	pid_t pid;
+	int status;
 	
-	while(childDone <= maxChild){
-		if(childDone < maxChild){
+	// File Varianles and error handeling
+	FILE *fn = fopen(outFile, "w");
+	if(!fn){
+		perror("ERROR, could not open file\n");
+		return(1);
+	}
+
+	// Shared Memory variables and error handeling
+	int shmid = shmget(SHMKEY, BUFF_SZ, 0777 | IPC_CREAT);
+	if(shmid == -1){
+		perror("ERROR in Parent for reguarind shmget\n");
+		exit(1);
+	}
+	
+	char* paddr = (char*)(shmat(shmid, 0, 0));
+	int* pint = (int*)(paddr);
+
+	
+	
+	while(childDone <= maxChild && exitCount < maxChild){
+		if(childDone < maxChild && activeChildren < childExist){
 			pid = fork();
-		
-		if(pid < 0){
-			perror("FORKING ERROR\n");
-			exit(0);
-		}
-		if(pid == 0){
-			char convert[15];
-			sprintf(convert, "%d", arr[childDone]);
-			char *args[] = {"./prime", convert, NULL};
-			execvp(args[0], args);
-			exit(0);
-		}
-	}
-		if(pid > 0){
-			if(childDone != 0)
-				activeChildren++;
-			childDone++;
-			if(activeChildren >= childExist){
-				printf("Currently waitng on children to die\n");
-				wait(NULL);
-				activeChildren--;
+			if(pid < 0){
+				perror("FORKING ERROR\n");
+				fclose(fn);
+				exit(0);
 			}
-			
+			else if(pid == 0){
+				// Shared memory testing
+
+				// Good stuff here
+				printf("[son] pid %d from [parent] pid %d\n", getpid(),getppid());
+				char convert[15];
+				sprintf(convert, "%d", arr[childDone]);
+				char *args[] = {"./prime", convert, NULL};
+				execvp(args[0], args);
+			}
+			childDone++;
+			activeChildren++;
 		}
+		if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
+				waitpid(pid, &status, 0);
+				if(WIFEXITED(status)){
+					int exitStatus = WEXITSTATUS(status);
+					printf("Exit status of child %d was %d\n", pid, exitStatus);
+					activeChildren--;
+					exitCount++;
+				}
+		}
+		//printf("Active Children = %d\n", activeChildren);
 	}
-	wait(NULL);
+	fclose(fn);
 	printf("Out of forking\n");
 
 	return 0;	
