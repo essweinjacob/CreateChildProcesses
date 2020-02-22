@@ -1,0 +1,10 @@
+File has been opened
+Child with PID 4658 and number 10 has launched at time 0 seconds and 0 nanoseconds
+Child with PID 4659 and number 11 has launched at time 0 seconds and 10000 nanoseconds
+Child with PID:4658 has been terminated after 0 seconds and 30010000 nanoseconds
+Child with PID 4660 and number 12 has launched at time 0 seconds and 30010000 nanoseconds
+Child with PID:4659 has been terminated after 0 seconds and 30020000 nanoseconds
+Child with PID 4661 and number 14 has launched at time 0 seconds and 30020000 nanoseconds
+Child with PID:4660 has been terminated after 0 seconds and 53850000 nanoseconds
+Child with PID:4661 has been terminated after 0 seconds and 77140000 nanoseconds
+File has been closed

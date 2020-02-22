@@ -25,18 +25,8 @@ int main(int argc, char* argv[]){
 		}
 	}
 	if(flag == 0)
-		printf("%d is a prime number\n", testNum);
+		return(1);
+	
 	else
-		printf("%d is not a prime number\n", testNum);
-
-	sleep(5);
-	int shmid = shmget(SHMKEY, BUFF_SZ, 0777);
-	if(shmid == -1){
-		perror("ERROR in child for shmget\n");
-		exit(1);
-	}
-	int* cint = (int*)(shmat(shmid, 0, 0));
-	printf("Child mem storage = %d\n", *cint);
-
-	return 0;
+		return(0);
 }
