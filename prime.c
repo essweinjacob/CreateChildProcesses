@@ -30,6 +30,7 @@ int main(int argc, char* argv[]){
 		if(*cCurrent - iniTime >= 100000){
 			printf("Coming here\n");
 			flag = -1;
+
 			return(-1);
 		}
 		if(testNum % i  == 0){
@@ -37,6 +38,9 @@ int main(int argc, char* argv[]){
 
 		}
 	}
+
+	shmdt(cTimeGrab);
+	shmctl(shmid, IPC_RMID, NULL);
 
 	if(flag == 0)
 		return(0);

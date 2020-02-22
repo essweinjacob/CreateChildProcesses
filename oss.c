@@ -19,6 +19,7 @@
 #include <sys/ipc.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 #include <stdbool.h>
@@ -26,19 +27,40 @@
 #define SHMKEY 	859047
 #define BUFF_SZ sizeof(int)
 
+// Imaginary clock
 struct Clock{
 	int sec;
 	int nanosec;
 	long total;
 };
+struct Clock timer;
+
+void god(int signal);
+void clockHandler(int signal);
+int setupClockInterupt();
+int setupRealClock();
+
+// List of PIDS
+int* listOfPIDS;
+int numOfPIDS = 0;
+
+char outFile[255] = "output.txt";       // Output file
 
 int main(int argc, char* argv[]){
+	// Setup for real clock timer and interupt
+	struct itimerval time;
+	time.it_value.tv_sec = 2;
+	time.it_value.tv_usec = 0;
+	time.it_interval = time.it_value;
+	signal(SIGALRM, god);
+	setitimer(ITIMER_REAL, &time, NULL);
+
+	// Variables for getOps and more
 	int option;		// Placeholder for command line arguments arg
 	int maxChild = 4;	// Max total of child processes oss wil create so we dont have infinite loop
 	int childExist = 2;	// The number of children processes that can exists at any gvient time
 	int startNum = 0;	// The start of numbers to be tested for primality
 	int increNum = 0;	// Increment between the numbers we test
-	char outFile[255] = "output.txt";	// Output file
 	
 	// Read throguht command line arguments
 	while((option = getopt(argc, argv, "hn:s:b:i:o:")) != -1){
@@ -91,6 +113,11 @@ int main(int argc, char* argv[]){
 	int exitCount = 0;
 	pid_t pid;
 	int status;
+	listOfPIDS = calloc(maxChild, sizeof(int));		// Dynamically allocate memory for pids
+
+	// Clock setup
+	timer.sec = 0;
+	timer.nanosec = 0;
 
 	// File Varianles and error handeling
 	FILE *fn = fopen(outFile, "w");
@@ -100,11 +127,6 @@ int main(int argc, char* argv[]){
 	}
 	fprintf(fn, "File has been opened\n");
 	
-	// Clock Setup
-	struct Clock timer;
-	timer.sec = 0;
-	timer.nanosec = 0;
-
 	// Shared Memory variables and error handeling
 	int shmid = shmget(SHMKEY, BUFF_SZ, 0777 | IPC_CREAT);
 	if(shmid == -1){
@@ -114,6 +136,10 @@ int main(int argc, char* argv[]){
 	
 	char* paddr = (char*)(shmat(shmid, 0, 0));
 	int* pTime = (int*)(paddr);
+
+	// Signal for catching ctl-c
+	signal(SIGINT, god);
+	signal(SIGPROF, god);
 	
 	while(childDone <= maxChild && exitCount < maxChild){
 		*pTime = timer.total;
@@ -143,28 +169,36 @@ int main(int argc, char* argv[]){
 				char *args[] = {"./prime", convertNum, convertPID, NULL};
 				execvp(args[0], args);
 			}
+			listOfPIDS[numOfPIDS] = pid;
+			numOfPIDS++;
 			fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", pid, numArr[childDone], timer.sec, timer.nanosec);
 			childDone++;
 			activeChildren++;
 		}
 		if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
 				if(WIFEXITED(status)){
-					int exitStatus = WEXITSTATUS(status);
-					fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n", pid, timer.sec, timer.nanosec);
-					//printf("Exit status of child %d was %d\n", pid, exitStatus);
-					if(exitStatus == 0){
-						primeNum[primeNumCount] = numArr[exitCount];
-						primeNumCount++;
-					}else if(exitStatus == 1){
-						nonPrimeNum[nonPrimeNumCount] = numArr[exitCount];
-						nonPrimeNumCount++;
-					}
-					activeChildren--;
-					exitCount++;
+				int exitStatus = WEXITSTATUS(status);
+				fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n", pid, timer.sec, timer.nanosec);
+				//printf("Exit status of child %d was %d\n", pid, exitStatus);
+				if(exitStatus == 0){
+					primeNum[primeNumCount] = numArr[exitCount];
+					primeNumCount++;
+				}else if(exitStatus == 1){
+					nonPrimeNum[nonPrimeNumCount] = numArr[exitCount];
+					nonPrimeNumCount++;
 				}
+				activeChildren--;
+				exitCount++;
+			}
 		}
 		//printf("Active Children = %d\n", activeChildren);
 	}
+
+	// Destroy shared memory
+	shmdt(pTime);
+	shmctl(shmid, IPC_RMID, NULL);
+	
+	// Write primes and non primes to file
 	fprintf(fn, "The prime numbers were: \n");
 	for(i = 0; i < primeNumCount; i++){
 		fprintf(fn, "%d ", primeNum[i]);
@@ -174,8 +208,24 @@ int main(int argc, char* argv[]){
 		fprintf(fn, "%d ", nonPrimeNum[i]);
 	}
 	fprintf(fn, "\nFile has been closed\n");
-	fclose(fn);
 
+	fclose(fn);		// Close file
 	return 0;	
 }
 
+void god(int signal){
+	printf("GOD HAS BEEN CALLED. THE RAPTURE HAS STARTED\n");
+	int i;
+	for(i = 0; i < numOfPIDS; i++){
+		kill(listOfPIDS[i], SIGTERM);
+	}
+
+	// Access file for saying god was called
+	FILE* out = fopen(outFile, "a");
+	fprintf(out, "God was called, and god has spoken and everyone has been killed. Soon there will be nothing.\n");
+	fprintf(out, "Time of world ending: %d seconds %d nanoseconds\n", timer.sec, timer.nanosec);
+	fclose(out);
+
+	free(listOfPIDS);
+	kill(getpid(), SIGTERM);	// God must now kill himself
+}

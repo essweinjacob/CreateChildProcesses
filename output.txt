@@ -1,16 +1,16 @@
 File has been opened
-Child with PID 24511 and number 10005 has launched at time 0 seconds and 1 nanoseconds
-Child with PID 24512 and number 10009 has launched at time 0 seconds and 2 nanoseconds
-Child with PID:24512 has been terminated after 0 seconds and 32189 nanoseconds
-Child with PID 24513 and number 10013 has launched at time 0 seconds and 32190 nanoseconds
-Child with PID:24511 has been terminated after 0 seconds and 32610 nanoseconds
-Child with PID 24514 and number 10017 has launched at time 0 seconds and 32611 nanoseconds
-Child with PID:24513 has been terminated after 0 seconds and 62810 nanoseconds
-Child with PID 24515 and number 10021 has launched at time 0 seconds and 62811 nanoseconds
-Child with PID:24514 has been terminated after 0 seconds and 63815 nanoseconds
-Child with PID:24515 has been terminated after 0 seconds and 88280 nanoseconds
+Child with PID 22742 and number 1000000 has launched at time 0 seconds and 1 nanoseconds
+Child with PID:22742 has been terminated after 0 seconds and 114639 nanoseconds
+Child with PID 22743 and number 1000004 has launched at time 0 seconds and 114640 nanoseconds
+Child with PID:22743 has been terminated after 0 seconds and 226936 nanoseconds
+Child with PID 22744 and number 1000008 has launched at time 0 seconds and 226937 nanoseconds
+Child with PID:22744 has been terminated after 0 seconds and 339383 nanoseconds
+Child with PID 22745 and number 1000012 has launched at time 0 seconds and 339384 nanoseconds
+Child with PID:22745 has been terminated after 0 seconds and 451957 nanoseconds
+Child with PID 22746 and number 1000016 has launched at time 0 seconds and 451958 nanoseconds
+Child with PID:22746 has been terminated after 0 seconds and 564005 nanoseconds
 The prime numbers were: 
-10005 
+
 The non prime numbers were: 
-10009 10013 10017 10021 
+
 File has been closed
