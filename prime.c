@@ -27,7 +27,7 @@ int main(int argc, char* argv[]){
 	int testNum = atoi(argv[1]);
 	for(i = 2; i <= testNum / 2; i++){
 		int * cCurrent = (int*)(shmat(shmid, 0, 0));
-		if(*cCurrent - iniTime >= 10000){
+		if(*cCurrent - iniTime >= 100000){
 			printf("Coming here\n");
 			flag = -1;
 			return(-1);
