@@ -20,19 +20,18 @@ int main(int argc, char* argv[]){
 		perror("ERROR IN CHILD FOR SHARED MEMORY");
 		exit(0);
 	}
-	long *cTimeGrab = (long*)(shmat(shmid, 0, 0));
-	long iniTime = *cTimeGrab;
+	int *cTimeGrab = (int*)(shmat(shmid, 0, 0));
+	int iniTime = *cTimeGrab;
 	int i;
 	int flag = 0;
 	int testNum = atoi(argv[1]);
 	for(i = 2; i <= testNum / 2; i++){
-		long * cCurrent = (long*)(shmat(shmid, 0, 0));
-		//printf("Elapsed time: %d\n", *cCurrent - iniTime);
-		/*if(*cCurrent - iniTime >= 1000000){
+		int * cCurrent = (int*)(shmat(shmid, 0, 0));
+		if(*cCurrent - iniTime >= 10000){
 			printf("Coming here\n");
 			flag = -1;
 			return(-1);
-		}*/
+		}
 		if(testNum % i  == 0){
 			flag = 1;
 

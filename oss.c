@@ -113,12 +113,12 @@ int main(int argc, char* argv[]){
 	}
 	
 	char* paddr = (char*)(shmat(shmid, 0, 0));
-	long* pTime = (long*)(paddr);
+	int* pTime = (int*)(paddr);
 	
 	while(childDone <= maxChild && exitCount < maxChild){
 		*pTime = timer.total;
-		timer.nanosec += 10000;
-		timer.total += 10000;
+		timer.nanosec += 1;
+		timer.total += 1;
 		if(timer.nanosec > 1000000000){
 			timer.sec++;
 			timer.nanosec = 1000000000 - timer.nanosec;
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]){
 				//*pint = 10 * childDone;
 				//printf("Parent mem int = %d\n", *pint);
 				// Good stuff here
-				printf("[son] pid %d from [parent] pid %d\n", getpid(),getppid());
+				//printf("[son] pid %d from [parent] pid %d\n", getpid(),getppid());
 				char convertNum[15];
 				char convertPID[15];
 				sprintf(convertNum, "%d", numArr[childDone]);
@@ -148,11 +148,10 @@ int main(int argc, char* argv[]){
 			activeChildren++;
 		}
 		if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
-				waitpid(pid, &status, 0);
 				if(WIFEXITED(status)){
 					int exitStatus = WEXITSTATUS(status);
 					fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n", pid, timer.sec, timer.nanosec);
-					printf("Exit status of child %d was %d\n", pid, exitStatus);
+					//printf("Exit status of child %d was %d\n", pid, exitStatus);
 					if(exitStatus == 0){
 						primeNum[primeNumCount] = numArr[exitCount];
 						primeNumCount++;
