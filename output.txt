@@ -1,10 +1,14 @@
 File has been opened
-Child with PID 4658 and number 10 has launched at time 0 seconds and 0 nanoseconds
-Child with PID 4659 and number 11 has launched at time 0 seconds and 10000 nanoseconds
-Child with PID:4658 has been terminated after 0 seconds and 30010000 nanoseconds
-Child with PID 4660 and number 12 has launched at time 0 seconds and 30010000 nanoseconds
-Child with PID:4659 has been terminated after 0 seconds and 30020000 nanoseconds
-Child with PID 4661 and number 14 has launched at time 0 seconds and 30020000 nanoseconds
-Child with PID:4660 has been terminated after 0 seconds and 53850000 nanoseconds
-Child with PID:4661 has been terminated after 0 seconds and 77140000 nanoseconds
+Child with PID 20619 and number 0 has launched at time 0 seconds and 10000 nanoseconds
+Child with PID 20620 and number 0 has launched at time 0 seconds and 20000 nanoseconds
+Child with PID:20619 has been terminated after 0 seconds and 5110000 nanoseconds
+Child with PID 20621 and number 0 has launched at time 0 seconds and 5120000 nanoseconds
+Child with PID:20620 has been terminated after 0 seconds and 5480000 nanoseconds
+Child with PID 20622 and number 0 has launched at time 0 seconds and 5490000 nanoseconds
+Child with PID:20621 has been terminated after 0 seconds and 9580000 nanoseconds
+Child with PID:20622 has been terminated after 0 seconds and 10700000 nanoseconds
+The prime numbers were: 
+0 0 0 0 
+The non prime numbers were: 
+
 File has been closed

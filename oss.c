@@ -29,6 +29,7 @@
 struct Clock{
 	int sec;
 	int nanosec;
+	long total;
 };
 
 int main(int argc, char* argv[]){
@@ -72,13 +73,17 @@ int main(int argc, char* argv[]){
 
 	// Create increments for prime numbers
 	int i;
-	int numArray[maxChild];
-	numArray[0] = startNum;
+	int numArr[maxChild];
+	numArr[0] = startNum;
 	for(i = 1; i < maxChild; i++){
-		numArray[i] = numArray[i-1] + increNum;
+		numArr[i] = numArr[i-1] + increNum;
 	}
 	
-	int arr[] = {10,11,12,14};
+	// Arrays for prime and non prime numbers
+	int primeNum[maxChild];
+	int primeNumCount = 0;
+	int nonPrimeNum[maxChild];
+	int nonPrimeNumCount = 0;
 	
 	// Variables for the fork loop
 	int activeChildren = 0;
@@ -108,10 +113,16 @@ int main(int argc, char* argv[]){
 	}
 	
 	char* paddr = (char*)(shmat(shmid, 0, 0));
-	int* pint = (int*)(paddr);
-
+	long* pTime = (long*)(paddr);
 	
 	while(childDone <= maxChild && exitCount < maxChild){
+		*pTime = timer.total;
+		timer.nanosec += 10000;
+		timer.total += 10000;
+		if(timer.nanosec > 1000000000){
+			timer.sec++;
+			timer.nanosec = 1000000000 - timer.nanosec;
+		}
 		if(childDone < maxChild && activeChildren < childExist){
 			pid = fork();
 			if(pid < 0){
@@ -124,39 +135,46 @@ int main(int argc, char* argv[]){
 				//*pint = 10 * childDone;
 				//printf("Parent mem int = %d\n", *pint);
 				// Good stuff here
-				//printf("[son] pid %d from [parent] pid %d\n", getpid(),getppid());
+				printf("[son] pid %d from [parent] pid %d\n", getpid(),getppid());
 				char convertNum[15];
 				char convertPID[15];
-				sprintf(convertNum, "%d", arr[childDone]);
+				sprintf(convertNum, "%d", numArr[childDone]);
 				sprintf(convertPID, "%d", getpid());
-				char *args[] = {"./prime", convertNum, NULL};
+				char *args[] = {"./prime", convertNum, convertPID, NULL};
 				execvp(args[0], args);
 			}
-			fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", pid, arr[childDone], timer.sec, timer.nanosec);
+			fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", pid, numArr[childDone], timer.sec, timer.nanosec);
 			childDone++;
 			activeChildren++;
-		}
-		timer.nanosec += 10000;                                                                                                                                                                                                                                                                                                      if(timer.nanosec > 1000000000){
-                        timer.sec++;
-			timer.nanosec = 1000000000 - timer.nanosec;
 		}
 		if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
 				waitpid(pid, &status, 0);
 				if(WIFEXITED(status)){
 					int exitStatus = WEXITSTATUS(status);
 					fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n", pid, timer.sec, timer.nanosec);
-					//printf("Exit status of child %d was %d\n", pid, exitStatus);
-					//if(exitStatus == 1)
-						//fprintf(fn, "%d is a prime number and was calculated after %d seconds and %d nanoseconds\n", arr[exitCount], timer.sec, timer.nanosec);
-					//else
-						//fprintf(fn, "%d is not a prime number and was calculated after %d seconds and %d nanoseconds\n", arr[exitCount], timer.sec, timer.nanosec);
+					printf("Exit status of child %d was %d\n", pid, exitStatus);
+					if(exitStatus == 0){
+						primeNum[primeNumCount] = numArr[exitCount];
+						primeNumCount++;
+					}else if(exitStatus == 1){
+						nonPrimeNum[nonPrimeNumCount] = numArr[exitCount];
+						nonPrimeNumCount++;
+					}
 					activeChildren--;
 					exitCount++;
 				}
 		}
 		//printf("Active Children = %d\n", activeChildren);
 	}
-	fprintf(fn, "File has been closed\n");
+	fprintf(fn, "The prime numbers were: \n");
+	for(i = 0; i < primeNumCount; i++){
+		fprintf(fn, "%d ", primeNum[i]);
+	}
+	fprintf(fn, "\nThe non prime numbers were: \n");
+	for(i = 0; i < nonPrimeNumCount; i++){
+		fprintf(fn, "%d ", nonPrimeNum[i]);
+	}
+	fprintf(fn, "\nFile has been closed\n");
 	fclose(fn);
 
 	return 0;	
