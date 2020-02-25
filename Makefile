@@ -15,4 +15,4 @@ prime.o: prime.c
 oss.o: oss.c
 		$(CC) $(CFLAGS) -c oss.c ossPrime.h
 clean:
-		/bin/rm -f *.o $(TARGET1) $(TARGET2)
+		/bin/rm -f *.o $(TARGET1) $(TARGET2) output.txt

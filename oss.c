@@ -24,23 +24,20 @@
 #include <unistd.h>
 #include <stdbool.h>
 
-#define SHMKEY 	859047
-#define BUFF_SZ sizeof(int)
-
 // Imaginary clock
 struct Clock{
 	int sec;
 	int nanosec;
 	long total;
 };
-struct Clock timer;
+
+struct Clock *timer;	// Simulated clock
 
 void god(int signal);
 void clockHandler(int signal);
-int setupClockInterupt();
-int setupRealClock();
+void addTime(int* sec, int* nanosec);
 
-// List of PIDS
+// List of PIDS if we need to clear them
 int* listOfPIDS;
 int numOfPIDS = 0;
 
@@ -52,7 +49,7 @@ int main(int argc, char* argv[]){
 	time.it_value.tv_sec = 2;
 	time.it_value.tv_usec = 0;
 	time.it_interval = time.it_value;
-	signal(SIGALRM, god);
+	signal(SIGALRM, god);	// Will call god if program takes longer then 2 seconds to run
 	setitimer(ITIMER_REAL, &time, NULL);
 
 	// Variables for getOps and more
@@ -93,7 +90,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-	// Create increments for prime numbers
+	// Create array for the test numbers
 	int i;
 	int numArr[maxChild];
 	numArr[0] = startNum;
@@ -106,6 +103,8 @@ int main(int argc, char* argv[]){
 	int primeNumCount = 0;
 	int nonPrimeNum[maxChild];
 	int nonPrimeNumCount = 0;
+	int timeOut[maxChild];
+	int timeOutCount = 0;
 	
 	// Variables for the fork loop
 	int activeChildren = 0;
@@ -115,10 +114,6 @@ int main(int argc, char* argv[]){
 	int status;
 	listOfPIDS = calloc(maxChild, sizeof(int));		// Dynamically allocate memory for pids
 
-	// Clock setup
-	timer.sec = 0;
-	timer.nanosec = 0;
-
 	// File Varianles and error handeling
 	FILE *fn = fopen(outFile, "w");
 	if(!fn){
@@ -126,78 +121,126 @@ int main(int argc, char* argv[]){
 		return(1);
 	}
 	fprintf(fn, "File has been opened\n");
-	
-	// Shared Memory variables and error handeling
-	int shmid = shmget(SHMKEY, BUFF_SZ, 0777 | IPC_CREAT);
-	if(shmid == -1){
-		perror("ERROR in Parent for reguarind shmget\n");
-		exit(1);
+
+	// Create shared memory key
+	key_t key1 = ftok("./oss.c", 0);
+	if(key1 == -1){
+		perror("ERROR deriving key1 in parent. Ftok() failed.\n");
+		printf("key1 = %d\n", key1);
+		return EXIT_FAILURE;
 	}
-	
-	char* paddr = (char*)(shmat(shmid, 0, 0));
-	int* pTime = (int*)(paddr);
+	// Get Shared memory key
+	int timerid = shmget(key1, sizeof(struct Clock), 0600 | IPC_CREAT);
+	if(timerid == -1){
+		perror("ERROR Getting shared memory tiemrid. shmget failed.\n");
+		return(0);
+	}
+	// Attach key
+	timer = (struct Clock*)shmat(timerid,(void*)0,0);
+	if(timer == (void*)-1){
+		perror("Failed to attach memory for timer shmat failed.\n");
+		return(0);
+	}
+	// Set timer initial values
+	timer->sec = 0;
+	timer->nanosec = 0;
+	// Create shared memory key
+	key_t key2 = ftok("./oss.c", 1);
+	if(key2 == -1){
+		perror("ERROR deriving key2 in parent. ftok() failed.");
+		return EXIT_FAILURE;
+	}
+	// Get shared memory key
+	int arrayid = shmget(key2, sizeof(int), 0666 | IPC_CREAT);
+	if(arrayid == -1){
+		perror("ERROR getting shared memory id for arrayid. shmget failed.");
+		return EXIT_FAILURE;
+	}
+	// Attach memory key
+	int* pArray = (int*)shmat(arrayid,(void*)0,0);
+	if(pArray == (void*)-1){
+		perror("Failed to attac memory for shared memory array shmat failed.");
+		return EXIT_FAILURE;
+	}
+	// Fill array with 0s
+	for(i = 0; i <= maxChild; i++){
+		pArray[i] = 0;
+	}
+
 
 	// Signal for catching ctl-c
 	signal(SIGINT, god);
 	signal(SIGPROF, god);
 	
+	// Create children unit we have reached the limit
 	while(childDone <= maxChild && exitCount < maxChild){
-		*pTime = timer.total;
-		timer.nanosec += 1;
-		timer.total += 1;
-		if(timer.nanosec > 1000000000){
-			timer.sec++;
-			timer.nanosec = 1000000000 - timer.nanosec;
-		}
-		if(childDone < maxChild && activeChildren < childExist){
+		// Create more children unitl we reach active child limit, or activechildren reaches 20
+		if(childDone < maxChild && activeChildren < childExist && activeChildren <= 20){
 			pid = fork();
+			// Fork error
 			if(pid < 0){
 				perror("FORKING ERROR\n");
 				fclose(fn);
-				exit(0);
+				return EXIT_FAILURE;
 			}
+			// Child is created
 			else if(pid == 0){
-				// Shared memory testing
-				//*pint = 10 * childDone;
-				//printf("Parent mem int = %d\n", *pint);
-				// Good stuff here
 				//printf("[son] pid %d from [parent] pid %d\n", getpid(),getppid());
 				char convertNum[15];
-				char convertPID[15];
+				char childNum[15];
+				// Convet numbers to strings for command arguements
 				sprintf(convertNum, "%d", numArr[childDone]);
-				sprintf(convertPID, "%d", getpid());
-				char *args[] = {"./prime", convertNum, convertPID, NULL};
+				sprintf(childNum, "%d", childDone);
+				// Execute ./prime
+				char *args[] = {"./prime", convertNum, childNum, NULL};
 				execvp(args[0], args);
 			}
 			listOfPIDS[numOfPIDS] = pid;
 			numOfPIDS++;
-			fprintf(fn, "Child with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", pid, numArr[childDone], timer.sec, timer.nanosec);
+			fprintf(fn, "Child %d with PID %d and number %d has launched at time %d seconds and %d nanoseconds\n", childDone, pid, numArr[childDone], timer->sec, timer->nanosec);
 			childDone++;
 			activeChildren++;
 		}
+		//Check and see if child has ended
 		if((pid = waitpid((pid_t)-1, &status, WNOHANG)) > 0){
-				if(WIFEXITED(status)){
+			if(WIFEXITED(status)){
 				int exitStatus = WEXITSTATUS(status);
-				fprintf(fn, "Child with PID:%d has been terminated after %d seconds and %d nanoseconds\n", pid, timer.sec, timer.nanosec);
+				//printf("Child %d with PID:%d has been terminated after %d seconds and %d nanoseconds\n", exitCount, pid, timer.sec, timer.nanosec);
+				//fprintf(fn, "Child %d with PID:%d has been terminated after %d seconds and %d nanoseconds\n", exitCount, pid, timer->sec, timer->nanosec);
 				//printf("Exit status of child %d was %d\n", pid, exitStatus);
 				if(exitStatus == 0){
+					fprintf(fn, "Child %d with PID %d has been terminated with the number %d after %d seconds and %d nanoseconds and determined it was prime. It returned %d\n", exitCount, pid, numArr[exitCount],timer->sec, timer->nanosec, pArray[exitCount]);
 					primeNum[primeNumCount] = numArr[exitCount];
 					primeNumCount++;
 				}else if(exitStatus == 1){
+					fprintf(fn, "Child %d with PID %d has been terminated with the number %d after %d seconds and %d nanoseconds and determined it wasn't prime. It returned %d\n", exitCount, pid, numArr[exitCount],timer->sec, timer->nanosec, pArray[exitCount]);
 					nonPrimeNum[nonPrimeNumCount] = numArr[exitCount];
 					nonPrimeNumCount++;
+				}else{
+					fprintf(fn, "Child %d with PID %d has been terminated with the number %d after %d seconds and %d nanoseconds. %d caused a timeout\n", exitCount, pid, numArr[exitCount], timer->sec, timer->nanosec, pArray[exitCount]);
+					timeOut[timeOutCount] = numArr[exitCount];
+					timeOutCount++;
 				}
 				activeChildren--;
 				exitCount++;
 			}
 		}
+		// Increment timer
+		timer->nanosec += 10000;
+		while(timer->nanosec >= 1000000000){
+			timer->sec++;
+			timer->nanosec -= 1000000000;
+		}
 		//printf("Active Children = %d\n", activeChildren);
 	}
 
 	// Destroy shared memory
-	shmdt(pTime);
-	shmctl(shmid, IPC_RMID, NULL);
-	
+	shmdt(timer);
+	shmctl(timerid, IPC_RMID, NULL);
+	shmdt(pArray);
+	shmctl(arrayid, IPC_RMID, NULL);
+	free(listOfPIDS);
+
 	// Write primes and non primes to file
 	fprintf(fn, "The prime numbers were: \n");
 	for(i = 0; i < primeNumCount; i++){
@@ -207,14 +250,19 @@ int main(int argc, char* argv[]){
 	for(i = 0; i < nonPrimeNumCount; i++){
 		fprintf(fn, "%d ", nonPrimeNum[i]);
 	}
+	fprintf(fn, "\nThe numbers the caused the time out were: \n");
+	for(i = 0; i < timeOutCount; i++){
+		fprintf(fn, "%d ", timeOut[i]);
+	}
 	fprintf(fn, "\nFile has been closed\n");
 
 	fclose(fn);		// Close file
 	return 0;	
 }
 
+// Is my signal handler please do not anger it
 void god(int signal){
-	printf("GOD HAS BEEN CALLED. THE RAPTURE HAS STARTED\n");
+	//printf("GOD HAS BEEN CALLED. THE RAPTURE HAS STARTED\n");
 	int i;
 	for(i = 0; i < numOfPIDS; i++){
 		kill(listOfPIDS[i], SIGTERM);
@@ -222,8 +270,8 @@ void god(int signal){
 
 	// Access file for saying god was called
 	FILE* out = fopen(outFile, "a");
-	fprintf(out, "God was called, and god has spoken and everyone has been killed. Soon there will be nothing.\n");
-	fprintf(out, "Time of world ending: %d seconds %d nanoseconds\n", timer.sec, timer.nanosec);
+	fprintf(out, "God was called, and the rapture has begun.. Soon there will be nothing.\n");
+	fprintf(out, "Time of world ending: %d seconds %d nanoseconds\n", timer->sec, timer->nanosec);
 	fclose(out);
 
 	free(listOfPIDS);
